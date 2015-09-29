@@ -1,3 +1,6 @@
 Kim Arre (karre)
 
+This program does the equivalent of “ls | sort -r > outfile" on commandline but
+with forks, execs, and pipes.
+
 Make the file with `make pipeit` and run the executable it creates: `pipeit`
