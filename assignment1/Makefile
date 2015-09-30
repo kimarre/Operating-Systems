@@ -1,13 +1,19 @@
 CC=gcc
 LD=gcc
-CFLAGS=-Wall -g -pedantic
+CFLAGS=-g
 LDFLAGS=-g
 
-test: testing.o functions.o
-	$(LD) $(LDFLAGS) testing.o functions.o -o testing
+malloc: testing.o malloc.o
+	$(LD) $(LDFLAGS) testing.o malloc.o -o testing
 
 testing.o: testing.c
 	$(CC) $(CFLAGS) -c testing.c
 
-functions.o: functions.c
-	$(CC) $(CFLAGS) -c functions.c
+malloc.o: malloc.c
+	$(CC) $(CFLAGS) -c malloc.c
+
+debug:
+	lldb testing
+
+clean:
+	rm testing.o testing functions.o
