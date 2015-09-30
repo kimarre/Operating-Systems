@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+// TODO: Handle if there's no memory at all for sbrk to take from
+
 #define CHUNK_SIZE 65536
 #define HEADER_SIZE 16
 
@@ -27,8 +29,12 @@ void initNewBlock(Block *lastBlock, Block *prevBlock, int size) {
    lastBlock->size = size;
 }
 
+void *realloc(void *ptr, size_t size) {
+
+}
+
 void *malloc(size_t size) {
-   void *prevBlock = lastBlock;
+   Block *prevBlock;
    // [x] if: we've used sbrk before and have a chunk
    // [ ]    if: there's a free already made block to use
    // [ ]       use it
@@ -44,8 +50,6 @@ void *malloc(size_t size) {
    if (!lastBlock) {
       // A chunk doesn't exist yet
       lastBlock = (Block *)sbrk((intptr_t)CHUNK_SIZE);
-
-      // Make the first block
       initNewBlock(lastBlock, NULL, size);
 
       return lastBlock + 1;
@@ -58,16 +62,27 @@ void *malloc(size_t size) {
          chunkRemaining += CHUNK_SIZE;
       }
 
-      Block *prevBlock = lastBlock;
+      prevBlock = lastBlock;
       lastBlock += lastBlock->size + 1;
       initNewBlock(lastBlock, prevBlock, size);
 
       return lastBlock + 1;
    }
 
-   char *str = "In the new malloc";
-   int blockSize = sizeof(Block);
-
    return 0;
 }
 
+void free(void *ptr) {
+   if (!ptr) {
+      return;
+   } else {
+      ptr->isTaken = 0;
+   }
+}
+
+void *calloc(size_t num, size_t size) {
+   void *ptr = malloc(num*size);
+   memset(ptr, 0, num*size);
+
+   return toReturn;
+}
