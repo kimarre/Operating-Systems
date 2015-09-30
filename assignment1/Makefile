@@ -16,4 +16,7 @@ debug:
 	lldb testing
 
 clean:
-	rm testing.o testing functions.o
+	rm testing.o malloc.o testing
+
+upload:
+	rsync Makefile functions.c malloc.c testing.c unix3:~/OS/assignment1
