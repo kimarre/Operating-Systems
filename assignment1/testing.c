@@ -14,7 +14,7 @@ int main() {
    char *name = charlie->name;
    int petSize = sizeof(Pet);
 
-   Pet *moose = (Pet *)malloc(sizeof(Pet));
+   Pet *moose = (Pet *)malloc(sizeof(Pet)*10);
    moose->num = 3;
    moose->name = "Moose-cat";
    int num2 = moose->num;
@@ -43,6 +43,3 @@ int main() {
    //should combine?
    return 0;
 }
-
-
-// mark the old block as free!

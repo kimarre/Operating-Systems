@@ -2,10 +2,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <assert.h>
 
-// TODO: Handle if there's no memory at all for sbrk to take from
+/* TODO:
+ * [ ] Handle if there's no memory at all for sbrk to take from
+ */
 
-#define CHUNK_SIZE 65536
+#define CHUNK_SIZE 64//65536
 #define HEADER_SIZE 16
 
 typedef struct Block {
@@ -18,7 +21,18 @@ static int chunkRemaining = -1;
 static Block *firstBlock = NULL;
 static Block *lastBlock = NULL;
 
+/* For use when findExitingBlock() returns 0. Handles chunkRemaining and sets
+ * up the new block at lastBlock.
+ */
 void initNewBlock(Block *lastBlock, Block *prevBlock, int size) {
+   if (size > CHUNK_SIZE) {
+      puts("Size is larger than CHUNK_SIZE");
+      int toAllocate = size - chunkRemaining + sizeof(Block);
+
+      sbrk((intptr_t)toAllocate);
+      chunkRemaining += toAllocate;
+   }
+
    if (chunkRemaining < size + HEADER_SIZE) {
       // if we need more chunk space
       puts("making a new chunk");
@@ -27,6 +41,10 @@ void initNewBlock(Block *lastBlock, Block *prevBlock, int size) {
    }
 
    chunkRemaining -= size + sizeof(Block);
+
+   if (size > CHUNK_SIZE) {
+      assert(chunkRemaining == 0);
+   }
 
    if (prevBlock) {
       prevBlock->next = lastBlock;
@@ -133,7 +151,7 @@ void *malloc(size_t size) {
 
       return lastBlock + 1;
    } else {
-      // If there's an old, freed block available for use
+      // look for an old, freed block available for use
       Block *blockFound = findExistingBlock(size);
 
       if (blockFound) {
