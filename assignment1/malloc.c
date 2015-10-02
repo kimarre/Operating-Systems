@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdint.h>
 #include <assert.h>
 #include <errno.h>
 
 #define CHUNK_SIZE 65536
-#define HEADER_SIZE 16
 
 typedef struct Block {
    struct Block *next;
@@ -14,6 +14,7 @@ typedef struct Block {
    int size;
 } Block;
 
+static int headerSize = -1;
 static int chunkRemaining = -1;
 static Block *firstBlock = NULL;
 static Block *lastBlock = NULL;
@@ -30,6 +31,29 @@ void *moarChunk(int increment) {
    return result;
 }
 
+/* Makes sure num is divisible by 16, or returns a value that rounds up to one
+ */
+int getAlignedVal(int num) {
+   if (num % 16 == 0) {
+      return num;
+   } else {
+      int toAdd = 16 - (num % 16);
+      return num + toAdd;
+   }
+
+}
+
+void *getAlignedPtr(void *ptr) {
+   int temp = (int)ptr;
+
+   if (temp % 16 == 0) {
+      return ptr;
+   } else {
+      int toAdd = 16 - (temp % 16);
+      return (char *)ptr + toAdd;
+   }
+}
+
 /* For use when findExitingBlock() returns 0. Handles chunkRemaining and sets
  * up the new block at lastBlock.
  */
@@ -42,7 +66,7 @@ void initNewBlock(Block *lastBlock, Block *prevBlock, int size) {
       chunkRemaining += toAllocate;
    }
 
-   if (chunkRemaining < size + HEADER_SIZE) {
+   if (chunkRemaining < size + headerSize) {
       // if we need more chunk space
       puts("making a new chunk");
       moarChunk((intptr_t)CHUNK_SIZE);
@@ -81,7 +105,7 @@ Block *findExistingBlock(int size) {
    while (temp) {
       puts("loop");
       if (temp->isTaken == 0) {
-         // this is only size, not size + HEADER_SIZE, because these are
+         // this is only size, not size + headerSize, because these are
          // existing blocks that already have headers
          if (temp->size >= size) {
             puts("found a single block large enough");
@@ -91,7 +115,7 @@ Block *findExistingBlock(int size) {
 
          } else if (temp->next && temp->next->isTaken == 0) {
             // The next block is free
-            addedSize = temp->size + temp->next->size + HEADER_SIZE;
+            addedSize = temp->size + temp->next->size + headerSize;
 
             if (addedSize >= size) {
                puts("combined sizes of two is enough");
@@ -115,14 +139,15 @@ void *realloc(void *ptr, size_t size) {
    if (ptr == NULL) {
       return malloc(size);
    }
-   Block *prevBlock;
-   Block *orig = ptr - HEADER_SIZE;
+   Block *prevBlock = NULL;
+   Block *orig = ptr - headerSize;
 
    // CHECK TO SEE IF IT"S ALREADY ENOUGH SPACE?
 
+   // If the block after the original one we're given is free
    if (orig->next && orig->next->isTaken == 0) {
-      int combinedSize = orig->size + orig->next->size + HEADER_SIZE;
-      // add HEADER_SIZE because one of the old ones is space we can reuse
+      int combinedSize = orig->size + orig->next->size + headerSize;
+      // add headerSize because one of the old ones is space we can reuse
 
       if (combinedSize >= size) {
          puts("realloc combining two blocks");
@@ -146,16 +171,28 @@ void *realloc(void *ptr, size_t size) {
       initNewBlock(lastBlock, prevBlock, size);
       puts("realloc creating new block");
 
-      return memcpy(lastBlock + HEADER_SIZE, ptr, orig->size) + 1;
+      return memcpy(lastBlock + headerSize, ptr, orig->size) + 1;
    }
 }
 
 void *malloc(size_t size) {
-   Block *prevBlock;
+   Block *prevBlock = NULL;
+
+   // First time calling malloc, set headersize
+   if (headerSize < 0) {
+      int blockSize = sizeof(Block);
+
+      headerSize = getAlignedVal(blockSize);
+   }
 
    if (chunkRemaining == -1) {
       // A chunk doesn't exist yet
-      firstBlock = lastBlock = (Block *)moarChunk((intptr_t)CHUNK_SIZE);
+      Block *breakPtr = (Block *)moarChunk((intptr_t)CHUNK_SIZE);
+
+      //breakPtr = (Block *)getAlignedVal((int)breakPtr);
+      breakPtr = getAlignedPtr(breakPtr);
+
+      firstBlock = lastBlock = breakPtr;
       chunkRemaining = CHUNK_SIZE;
       initNewBlock(lastBlock, NULL, size);
 
@@ -181,7 +218,7 @@ void *malloc(size_t size) {
 }
 
 void free(void *ptr) {
-   Block *header = ptr - HEADER_SIZE;
+   Block *header = ptr - headerSize;
 
    if (!ptr) {
       return;
