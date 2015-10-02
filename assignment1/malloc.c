@@ -14,7 +14,7 @@ typedef struct Block {
    int size;
 } Block;
 
-static int chunkRemaining = CHUNK_SIZE;
+static int chunkRemaining = -1;
 static Block *firstBlock = NULL;
 static Block *lastBlock = NULL;
 
@@ -125,9 +125,10 @@ void *realloc(void *ptr, size_t size) {
 void *malloc(size_t size) {
    Block *prevBlock;
 
-   if (!firstBlock) {
+   if (chunkRemaining == -1) {
       // A chunk doesn't exist yet
       firstBlock = lastBlock = (Block *)sbrk((intptr_t)CHUNK_SIZE);
+      chunkRemaining = CHUNK_SIZE;
       initNewBlock(lastBlock, NULL, size);
 
       return lastBlock + 1;
