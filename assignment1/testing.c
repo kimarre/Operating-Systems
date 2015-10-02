@@ -14,7 +14,7 @@ int main() {
    char *name = charlie->name;
    int petSize = sizeof(Pet);
 
-   Pet *moose = (Pet *)malloc(sizeof(Pet)*10);
+   Pet *moose = (Pet *)malloc(sizeof(Pet));
    moose->num = 3;
    moose->name = "Moose-cat";
    int num2 = moose->num;
@@ -32,11 +32,9 @@ int main() {
    int mochanum = mocha->num;
    char *mochaname = mocha->name;
 
-   //break for maya location
+   // break for charlie location
 
-   free(maya);
-   free(mocha);
-
+   free(moose);
    charlie = realloc(charlie, sizeof(Pet)*2);
 
    // break for charlie location

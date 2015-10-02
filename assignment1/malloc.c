@@ -3,12 +3,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
 
-/* TODO:
- * [ ] Handle if there's no memory at all for sbrk to take from
- */
-
-#define CHUNK_SIZE 64//65536
+#define CHUNK_SIZE 65536
 #define HEADER_SIZE 16
 
 typedef struct Block {
@@ -21,6 +18,18 @@ static int chunkRemaining = -1;
 static Block *firstBlock = NULL;
 static Block *lastBlock = NULL;
 
+/* Calls sbrk and verifies that it succeeds. Exits if it doesn't.
+ */
+void *moarChunk(int increment) {
+   void *result = sbrk((intptr_t)CHUNK_SIZE);
+   if (result == (void *)(-1)) {
+      errno = ENOMEM;
+      perror("Ran out of memory to allocate with sbrk");
+      exit(0);
+   }
+   return result;
+}
+
 /* For use when findExitingBlock() returns 0. Handles chunkRemaining and sets
  * up the new block at lastBlock.
  */
@@ -29,14 +38,15 @@ void initNewBlock(Block *lastBlock, Block *prevBlock, int size) {
       puts("Size is larger than CHUNK_SIZE");
       int toAllocate = size - chunkRemaining + sizeof(Block);
 
-      sbrk((intptr_t)toAllocate);
+      moarChunk((intptr_t)toAllocate);
       chunkRemaining += toAllocate;
    }
 
    if (chunkRemaining < size + HEADER_SIZE) {
       // if we need more chunk space
       puts("making a new chunk");
-      sbrk((intptr_t)CHUNK_SIZE);
+      moarChunk((intptr_t)CHUNK_SIZE);
+
       chunkRemaining += CHUNK_SIZE;
    }
 
@@ -145,7 +155,7 @@ void *malloc(size_t size) {
 
    if (chunkRemaining == -1) {
       // A chunk doesn't exist yet
-      firstBlock = lastBlock = (Block *)sbrk((intptr_t)CHUNK_SIZE);
+      firstBlock = lastBlock = (Block *)moarChunk((intptr_t)CHUNK_SIZE);
       chunkRemaining = CHUNK_SIZE;
       initNewBlock(lastBlock, NULL, size);
 
