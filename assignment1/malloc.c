@@ -61,7 +61,6 @@ void initNewBlock(Block *lastBlock, Block *prevBlock, int size) {
    int toAllocate;
 
    if (size > CHUNK_SIZE) {
-      puts("Size is larger than CHUNK_SIZE");
       toAllocate = size - chunkRemaining + sizeof(Block);
       toAllocate = getAlignedVal(toAllocate);
 
@@ -71,7 +70,6 @@ void initNewBlock(Block *lastBlock, Block *prevBlock, int size) {
 
    if (chunkRemaining < size + headerSize) {
       // if we need more chunk space
-      puts("making a new chunk");
       moarChunk((intptr_t)CHUNK_SIZE);
 
       chunkRemaining += CHUNK_SIZE;
@@ -107,12 +105,10 @@ Block *findExistingBlock(int size) {
    int addedSize;
 
    while (temp) {
-      puts("loop");
       if (temp->isTaken == 0) {
          // this is only size, not size + headerSize, because these are
          // existing blocks that already have headers
          if (temp->size >= size) {
-            puts("found a single block large enough");
             // If we find a block that's big enough
             temp->isTaken = 1;
             return temp;
@@ -122,7 +118,6 @@ Block *findExistingBlock(int size) {
             addedSize = temp->size + temp->next->size + headerSize;
 
             if (addedSize >= size) {
-               puts("combined sizes of two is enough");
                // The combined sizes of the two is enough
 
                // Remove the eaten up one from the linked list
@@ -140,6 +135,7 @@ Block *findExistingBlock(int size) {
 }
 
 void *realloc(void *ptr, size_t size) {
+   void *debug_ptr = ptr;
    if (ptr == NULL) {
       return malloc(size);
    }
@@ -157,6 +153,14 @@ void *realloc(void *ptr, size_t size) {
          // Combine the two blocks
          orig->next = orig->next->next;
          orig->size = combinedSize;
+
+         if (getenv("DEBUG_MALLOC")) {
+            char buffer[100];
+            char *debug = "MALLOC: realloc(%p, %d) => (ptr=%p, size=%d)\n";
+            snprintf(buffer, 100, debug, debug_ptr, size, ptr, size);
+            fputs(buffer, stderr);
+         }
+
          return ptr;
       }
    }
@@ -166,11 +170,27 @@ void *realloc(void *ptr, size_t size) {
    if (newBlock) {
       // there's an existing block that could be used
       orig->isTaken = 0;
+
+      if (getenv("DEBUG_MALLOC")) {
+         char buffer[100];
+         char *debug = "MALLOC: realloc(%p, %d) => (ptr=%p, size=%d)\n";
+         snprintf(buffer, 100, debug, debug_ptr, size, newBlock + 1, size);
+         fputs(buffer, stderr);
+      }
+
       return memcpy(newBlock + 1, ptr, orig->size);
    } else {
       prevBlock = lastBlock;
       lastBlock += lastBlock->size + 1;
       initNewBlock(lastBlock, prevBlock, size);
+
+      if (getenv("DEBUG_MALLOC")) {
+         char buffer[100];
+         char *debug = "MALLOC: realloc(%p, %d) => (ptr=%p, size=%d)\n";
+         snprintf(buffer, 100, debug, debug_ptr, size, lastBlock + headerSize,
+          size);
+         fputs(buffer, stderr);
+      }
 
       return memcpy(lastBlock + headerSize, ptr, orig->size) + 1;
    }
@@ -178,6 +198,7 @@ void *realloc(void *ptr, size_t size) {
 
 void *malloc(size_t size) {
    Block *prevBlock = NULL;
+
 
    // First time calling malloc, set headersize
    if (headerSize < 0) {
@@ -197,20 +218,41 @@ void *malloc(size_t size) {
       chunkRemaining = CHUNK_SIZE;
       initNewBlock(lastBlock, NULL, size);
 
+      if (getenv("DEBUG_MALLOC")) {
+         char buffer[100];
+         char *debug = "MALLOC: malloc(%d) => (ptr=%p, size=%d)\n";
+         snprintf(buffer, 100, debug, size, lastBlock + 1,
+          size);
+         fputs(buffer, stderr);
+      }
+
       return lastBlock + 1;
    } else {
       // look for an old, freed block available for use
       Block *blockFound = findExistingBlock(size);
 
       if (blockFound) {
-         puts("found an existing block to return");
+         if (getenv("DEBUG_MALLOC")) {
+            char buffer[100];
+            char *debug = "MALLOC: malloc(%d) => (ptr=%p, size=%d)\n";
+            snprintf(buffer, 100, debug, size, blockFound,
+             size);
+            fputs(buffer, stderr);
+         }
+
          return blockFound;
       }
-      puts("didn't find a freed block");
 
       prevBlock = lastBlock;
       lastBlock += lastBlock->size + 1;
       initNewBlock(lastBlock, prevBlock, size);
+
+      if (getenv("DEBUG_MALLOC")) {
+         char buffer[100];
+         char *debug = "MALLOC: malloc(%d) => (ptr=%p, size=%d)\n";
+         snprintf(buffer, 100, debug, size, lastBlock + 1, size);
+         fputs(buffer, stderr);
+      }
 
       return lastBlock + 1;
    }
@@ -219,12 +261,21 @@ void *malloc(size_t size) {
 }
 
 void free(void *ptr) {
+   if (ptr == NULL) {
+      return;
+   }
+
    Block *header = ptr - headerSize;
 
    if (!ptr) {
+      if (getenv("DEBUG_MALLOC")) {
+         char buffer[100];
+         char *debug = "MALLOC: free(%p)\n";
+         snprintf(buffer, 100, debug, NULL);
+         fputs(buffer, stderr);
+      }
       return;
    } else {
-      puts("set isTaken to 0");
       header->isTaken = 0;
    }
 }
@@ -232,6 +283,13 @@ void free(void *ptr) {
 void *calloc(size_t num, size_t size) {
    void *ptr = malloc(num*size);
    memset(ptr, 0, num*size);
+
+   if (getenv("DEBUG_MALLOC")) {
+      char buffer[100];
+      char *debug = "MALLOC: calloc(%d, %d) => (ptr=%p, size=%d)\n";
+      snprintf(buffer, 100, debug, num, size, ptr, size);
+      fputs(buffer, stderr);
+   }
 
    return ptr;
 }

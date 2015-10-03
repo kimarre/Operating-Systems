@@ -39,5 +39,10 @@ int main() {
 
    // break for charlie location
    //should combine?
+
+   // Make the compiler stop yelling at me for unused variables
+   if (num || name || petSize || num2 || moosename || mayaNum || mayaname ||
+    mochanum || mochaname) {}
+
    return 0;
 }
