@@ -143,6 +143,10 @@ void *realloc(void *ptr, size_t size) {
    Block *orig = (Block *)ptr - 1;
 
    // CHECK TO SEE IF IT"S ALREADY ENOUGH SPACE?
+   if (size <= orig->size) {
+      return ptr;
+   }
+
 
    // If the block after the original one we're given is free
    if (orig->next && orig->next->isTaken == 0) {
@@ -161,7 +165,7 @@ void *realloc(void *ptr, size_t size) {
             fputs(buffer, stderr);
          }
 
-         return ptr;
+         return orig+1;
       }
    }
 

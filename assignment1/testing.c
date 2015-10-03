@@ -32,6 +32,20 @@ int main() {
    int mochanum = mocha->num;
    char *mochaname = mocha->name;
 
+   int i;
+   int count = 100;
+   Pet *animals[count];
+
+   for(i = 0; i<count; i++) {
+      animals[i] = (Pet *)malloc(sizeof(Pet));
+   }
+
+   for(i = 0; i<count; i++) {
+      free(animals[i]);
+   }
+
+
+
    // break for charlie location
 
    free(moose);

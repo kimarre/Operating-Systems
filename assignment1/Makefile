@@ -43,8 +43,8 @@ debug:
 	lldb testing
 
 clean:
-	rm testing.o malloc.o testing tryme.o malloc64.o malloc32.o
 	rm -r lib lib64
+	rm testing *.o core* tryme testing
 
 upload:
 	rsync Makefile functions.c malloc.c testing.c unix3:~/OS/assignment1
