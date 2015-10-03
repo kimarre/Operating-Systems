@@ -58,9 +58,12 @@ void *getAlignedPtr(void *ptr) {
  * up the new block at lastBlock.
  */
 void initNewBlock(Block *lastBlock, Block *prevBlock, int size) {
+   int toAllocate;
+
    if (size > CHUNK_SIZE) {
       puts("Size is larger than CHUNK_SIZE");
-      int toAllocate = size - chunkRemaining + sizeof(Block);
+      toAllocate = size - chunkRemaining + sizeof(Block);
+      toAllocate = getAlignedVal(toAllocate);
 
       moarChunk((intptr_t)toAllocate);
       chunkRemaining += toAllocate;
@@ -74,7 +77,8 @@ void initNewBlock(Block *lastBlock, Block *prevBlock, int size) {
       chunkRemaining += CHUNK_SIZE;
    }
 
-   chunkRemaining -= size + sizeof(Block);
+   int totalSpace = getAlignedVal(size + sizeof(Block));
+   chunkRemaining -= totalSpace;
 
    if (size > CHUNK_SIZE) {
       assert(chunkRemaining == 0);
@@ -85,7 +89,7 @@ void initNewBlock(Block *lastBlock, Block *prevBlock, int size) {
    }
 
    lastBlock->isTaken = 1;
-   lastBlock->size = size;
+   lastBlock->size = totalSpace - headerSize;
    lastBlock->next = NULL;
 }
 
@@ -140,7 +144,7 @@ void *realloc(void *ptr, size_t size) {
       return malloc(size);
    }
    Block *prevBlock = NULL;
-   Block *orig = ptr - headerSize;
+   Block *orig = (Block *)ptr - 1;
 
    // CHECK TO SEE IF IT"S ALREADY ENOUGH SPACE?
 
@@ -150,7 +154,6 @@ void *realloc(void *ptr, size_t size) {
       // add headerSize because one of the old ones is space we can reuse
 
       if (combinedSize >= size) {
-         puts("realloc combining two blocks");
          // Combine the two blocks
          orig->next = orig->next->next;
          orig->size = combinedSize;
@@ -162,14 +165,12 @@ void *realloc(void *ptr, size_t size) {
 
    if (newBlock) {
       // there's an existing block that could be used
-      puts("realloc found an existing block to use");
       orig->isTaken = 0;
       return memcpy(newBlock + 1, ptr, orig->size);
    } else {
       prevBlock = lastBlock;
       lastBlock += lastBlock->size + 1;
       initNewBlock(lastBlock, prevBlock, size);
-      puts("realloc creating new block");
 
       return memcpy(lastBlock + headerSize, ptr, orig->size) + 1;
    }
