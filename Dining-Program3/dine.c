@@ -175,20 +175,20 @@ void *cycle(void *arg) {
       phil->state = TRANSITION;
       printStatus(NULL);
 
+      phil->forksHeld[phil->right] = '-';
       result = pthread_mutex_unlock(&forks[phil->right]);
       if (result) {
          perror("lock failed :(\n");
          exit(1);
       }
-      phil->forksHeld[phil->right] = '-';
       printStatus(NULL);
 
+      phil->forksHeld[phil->left] = '-';
       result = pthread_mutex_unlock(&forks[phil->left]);
       if (result) {
          perror("lock failed :(\n");
          exit(1);
       }
-      phil->forksHeld[phil->left] = '-';
       printStatus(NULL);
 
       /* think */
@@ -215,13 +215,17 @@ int main(int argc, const char *argv[]) {
    init(repetitions);
 
    /* print initial table labels */
-   printf("|=============|=============|=============|=============|=============|\n");
-   printf("|      A      |      B      |      C      |      D      |      E      |\n");
-   printf("|=============|=============|=============|=============|=============|\n");
+   printf("|=============|=============|=============|=============|");
+   printf("=============|\n");
+   printf("|      A      |      B      |      C      |      D      |");
+   printf("      E      |\n");
+   printf("|=============|=============|=============|=============|");
+   printf("=============|\n");
 
    int i;
    for (i = 0; i < NUM_PHILOSOPHERS; i++) {
-      result = pthread_create(&threads[i], NULL, cycle, (void *)(&philosophers[i]));
+      result = pthread_create(&threads[i], NULL, cycle,
+       (void *)(&philosophers[i]));
       if (result) {
          perror("Thread creation failed\n");
          exit(1);
@@ -231,7 +235,8 @@ int main(int argc, const char *argv[]) {
    for (i = 0; i < NUM_PHILOSOPHERS; i++) {
       pthread_join(threads[i], NULL);
    }
-   printf("|=============|=============|=============|=============|=============|\n");
+   printf("|=============|=============|=============|=============|");
+   printf("=============|\n");
 
    return 0;
 }
