@@ -120,6 +120,13 @@ void init(int numRepeat) {
    }
 }
 
+void testLockResult(int result) {
+   if (result) {
+      perror("Lock/unlock failed :(\n");
+      exit(1);
+   }
+}
+
 void *cycle(void *arg) {
    Philosopher *phil = (Philosopher *)arg;
    int result;
@@ -132,36 +139,27 @@ void *cycle(void *arg) {
       phil->state = TRANSITION;
       if (phil->id % 2 == 0) { /* even philosopher, reach for right fork */
          result = pthread_mutex_lock(&forks[phil->right]);
-         if (result) {
-            perror("lock failed :(\n");
-            exit(1);
-         }
+         testLockResult(result);
          phil->forksHeld[phil->right] = intToChar(phil->right);
 
          printStatus(NULL);
 
          result = pthread_mutex_lock(&forks[phil->left]);
-         if (result) {
-            perror("lock failed :(\n");
-            exit(1);
-         }
+         testLockResult(result);
+
          phil->forksHeld[phil->left] = intToChar(phil->left);
          printStatus(NULL);
       } else {
          /* odd philosopher - reach for left fork first */
          result = pthread_mutex_lock(&forks[phil->left]);
-         if (result) {
-            perror("lock failed :(\n");
-            exit(1);
-         }
+         testLockResult(result);
+
          phil->forksHeld[phil->left] = intToChar(phil->left);
          printStatus(NULL);
 
          result = pthread_mutex_lock(&forks[phil->right]);
-         if (result) {
-            perror("lock failed :(\n");
-            exit(1);
-         }
+         testLockResult(result);
+
          phil->forksHeld[phil->right] = intToChar(phil->right);
          printStatus(NULL);
       }
@@ -177,18 +175,14 @@ void *cycle(void *arg) {
 
       phil->forksHeld[phil->right] = '-';
       result = pthread_mutex_unlock(&forks[phil->right]);
-      if (result) {
-         perror("lock failed :(\n");
-         exit(1);
-      }
+      testLockResult(result);
+
       printStatus(NULL);
 
       phil->forksHeld[phil->left] = '-';
       result = pthread_mutex_unlock(&forks[phil->left]);
-      if (result) {
-         perror("lock failed :(\n");
-         exit(1);
-      }
+      testLockResult(result);
+
       printStatus(NULL);
 
       /* think */
