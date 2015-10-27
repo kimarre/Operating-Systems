@@ -1,4 +1,4 @@
 
 dine: dine.c
-	gcc -g -Wall dine.c dawdle.c -lpthread -lrt
+	gcc -g -Wall -o dine dine.c dawdle.c -lpthread -lrt
 

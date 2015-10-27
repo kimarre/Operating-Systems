@@ -13,7 +13,7 @@ void dawdle();
 
 typedef struct Philosopher {
    int id;
-   int left; /* indices into the forks array */
+   int left;     /* indices into the forks array */
    int right;
    int state;
    int repeat;
@@ -198,6 +198,7 @@ void *cycle(void *arg) {
    }
 
    phil->state = TRANSITION;
+   printStatus(NULL);
 
    pthread_exit(0);
 }
