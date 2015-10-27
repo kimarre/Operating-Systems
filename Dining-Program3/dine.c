@@ -1,9 +1,3 @@
-/*
- * TODO:
- *    - use dawdle() instead of sleep()
- *    - print what forks they're holding
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -13,11 +7,13 @@
 #define TRANSITION 3
 
 #define NUM_PHILOSOPHERS 5
+#define CHAR_OFFSET 48
+
+void dawdle();
 
 typedef struct Philosopher {
    int id;
-   /* indices into the forks array */
-   int left;
+   int left; /* indices into the forks array */
    int right;
    int state;
    int repeat;
@@ -30,7 +26,7 @@ static pthread_t threads[NUM_PHILOSOPHERS];
 static pthread_mutex_t printLock;
 
 char intToChar(int num) {
-   return (char)(num + 48);
+   return (char)(num + CHAR_OFFSET);
 }
 
 /* Given NULL, it will print the statuses of all threads in the table
@@ -173,7 +169,7 @@ void *cycle(void *arg) {
       /* eat */
       phil->state = EATING;
       printStatus(NULL);
-      sleep(1);
+      dawdle();
 
       /* transition */
       phil->state = TRANSITION;
@@ -198,7 +194,7 @@ void *cycle(void *arg) {
       /* think */
       phil->state = THINKING;
       printStatus(NULL);
-      sleep(1);
+      dawdle();
    }
 
    phil->state = TRANSITION;
