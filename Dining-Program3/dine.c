@@ -18,17 +18,20 @@ typedef struct Philosopher {
    int id;
    /* indices into the forks array */
    int left;
-   int isHoldingLeft;
    int right;
-   int isHoldingRight;
    int state;
    int repeat;
+   char forksHeld[NUM_PHILOSOPHERS];
 } Philosopher;
 
 static pthread_mutex_t forks[NUM_PHILOSOPHERS];
 static Philosopher philosophers[NUM_PHILOSOPHERS];
 static pthread_t threads[NUM_PHILOSOPHERS];
 static pthread_mutex_t printLock;
+
+char intToChar(int num) {
+   return (char)(num + 48);
+}
 
 /* Given NULL, it will print the statuses of all threads in the table
  * Given something else, it'll print the string passed - for debugging
@@ -44,19 +47,31 @@ void printStatus(char *string) {
    if (string) {
       printf(string);
    } else {
-      int i, state;
+      int i, j, state;
       for(i = 0; i < NUM_PHILOSOPHERS; i++) {
          state = philosophers[i].state;
 
          switch(state) {
             case TRANSITION:
-               printf("|       ");
+               printf("| ");
+               for (j = 0; j < NUM_PHILOSOPHERS; j++) {
+                  printf("%c", philosophers[i].forksHeld[j]);
+               }
+               printf("       ");
                break;
             case EATING:
-               printf("|  EAT  ");
+               printf("| ");
+               for (j = 0; j < NUM_PHILOSOPHERS; j++) {
+                  printf("%c", philosophers[i].forksHeld[j]);
+               }
+               printf("  EAT  ");
                break;
             case THINKING:
-               printf("| THINK ");
+               printf("| ");
+               for (j = 0; j < NUM_PHILOSOPHERS; j++) {
+                  printf("%c", philosophers[i].forksHeld[j]);
+               }
+               printf(" THINK ");
          }
       }
       printf("|\n");
@@ -94,8 +109,11 @@ void init(int numRepeat) {
       philosophers[i].right = i;
       philosophers[i].repeat = numRepeat;
       philosophers[i].state = TRANSITION;
-      philosophers[i].isHoldingLeft = 0;
-      philosophers[i].isHoldingRight = 0;
+
+      int j;
+      for (j = 0; j < NUM_PHILOSOPHERS; j++) {
+         philosophers[i].forksHeld[j] = '-';
+      }
 
       if (i == NUM_PHILOSOPHERS - 1) {
          /* if it's the last */
@@ -122,14 +140,17 @@ void *cycle(void *arg) {
             perror("lock failed :(\n");
             exit(1);
          }
-         phil->isHoldingRight = 1;
+         phil->forksHeld[phil->right] = intToChar(phil->right);
+
+         printStatus(NULL);
 
          result = pthread_mutex_lock(&forks[phil->left]);
          if (result) {
             perror("lock failed :(\n");
             exit(1);
          }
-         phil->isHoldingLeft = 1;
+         phil->forksHeld[phil->left] = intToChar(phil->left);
+         printStatus(NULL);
       } else {
          /* odd philosopher - reach for left fork first */
          result = pthread_mutex_lock(&forks[phil->left]);
@@ -137,14 +158,16 @@ void *cycle(void *arg) {
             perror("lock failed :(\n");
             exit(1);
          }
-         phil->isHoldingLeft = 1;
+         phil->forksHeld[phil->left] = intToChar(phil->left);
+         printStatus(NULL);
 
          result = pthread_mutex_lock(&forks[phil->right]);
          if (result) {
             perror("lock failed :(\n");
             exit(1);
          }
-         phil->isHoldingRight = 1;
+         phil->forksHeld[phil->right] = intToChar(phil->right);
+         printStatus(NULL);
       }
 
       /* eat */
@@ -161,14 +184,16 @@ void *cycle(void *arg) {
          perror("lock failed :(\n");
          exit(1);
       }
-      phil->isHoldingRight = 0;
+      phil->forksHeld[phil->right] = '-';
+      printStatus(NULL);
 
       result = pthread_mutex_unlock(&forks[phil->left]);
       if (result) {
          perror("lock failed :(\n");
          exit(1);
       }
-      phil->isHoldingLeft = 0;
+      phil->forksHeld[phil->left] = '-';
+      printStatus(NULL);
 
       /* think */
       phil->state = THINKING;
@@ -193,9 +218,9 @@ int main(int argc, const char *argv[]) {
    init(repetitions);
 
    /* print initial table labels */
-   printf("|==========|==========|==========|==========|==========|\n");
-   printf("|    A     |     B    |     C    |     D    |     E    |\n");
-   printf("|==========|==========|==========|==========|==========|\n");
+   printf("|=============|=============|=============|=============|=============|\n");
+   printf("|      A      |      B      |      C      |      D      |      E      |\n");
+   printf("|=============|=============|=============|=============|=============|\n");
 
    int i;
    for (i = 0; i < NUM_PHILOSOPHERS; i++) {
@@ -209,7 +234,7 @@ int main(int argc, const char *argv[]) {
    for (i = 0; i < NUM_PHILOSOPHERS; i++) {
       pthread_join(threads[i], NULL);
    }
-   printf("|==========|==========|==========|==========|==========|\n");
+   printf("|=============|=============|=============|=============|=============|\n");
 
    return 0;
 }
